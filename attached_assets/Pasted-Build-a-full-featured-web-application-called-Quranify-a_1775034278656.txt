@@ -1,0 +1,227 @@
+Build a full-featured web application called **Quranify** — a Quran memorization (Hifzh) tracking platform with community and gamification features.
+
+## 🎯 CORE PURPOSE
+
+Help users memorize the Quran consistently through tracking, motivation, community (halaqah), and progress visualization.
+
+---
+
+## 👤 USER ROLES
+
+1. **Admin**
+2. **Mentor (Halaqah leader)**
+3. **Member (User)**
+
+---
+
+## 🔐 AUTHENTICATION
+
+* Email & password login
+* User registration
+* Session-based authentication
+* Each user has profile:
+
+  * name
+  * email
+  * role
+  * halaqah_group
+
+---
+
+## 🧩 CORE FEATURES
+
+### 1. 🏠 DASHBOARD
+
+* Greeting: “Assalamu’alaikum, [Name]”
+* Show:
+
+  * Today’s ayah (random or daily ayah)
+  * Motivational Quran quote
+  * User stats:
+
+    * total ayat memorized
+    * current streak
+    * last activity
+
+---
+
+### 2. 📖 HIFZH TRACKER
+
+Users can:
+
+* Add new memorization entry:
+
+  * Surah name
+  * Ayah range (e.g., 1–5)
+  * Status (New / Review / Strong)
+  * Date
+
+* Display entries in:
+
+  * Table view
+  * Filter by date / surah
+
+---
+
+### 3. 🔥 STREAK SYSTEM
+
+* Track daily activity
+* If user logs hafalan → streak +1
+* If missed → reset streak
+
+---
+
+### 4. 🏆 LEADERBOARD
+
+* Rank users by:
+
+  * total ayat memorized
+* Show:
+
+  * Top 10 users
+  * Current user ranking
+* Include:
+
+  * name
+  * total ayat
+  * streak
+
+---
+
+### 5. 🤝 HALAQAH (GROUP SYSTEM)
+
+* Users belong to a group
+* Each group has:
+
+  * mentor
+  * members
+
+Features:
+
+* View group members
+* Group leaderboard
+* Mentor can monitor progress
+
+---
+
+### 6. 📝 PROFILE PAGE
+
+* Display:
+
+  * Name
+  * Email
+  * Group
+  * Stats:
+
+    * total ayat
+    * streak
+* Edit profile
+
+---
+
+### 7. 📊 ANALYTICS
+
+* Show:
+
+  * weekly progress chart
+  * monthly ayat count
+* Use simple bar or line chart
+
+---
+
+## 🗄️ DATABASE STRUCTURE
+
+### USERS
+
+* id
+* name
+* email
+* password
+* role
+* halaqah_group
+
+### HAFALAN
+
+* id
+* user_id
+* surah
+* ayah_start
+* ayah_end
+* status
+* date
+
+### GROUPS
+
+* id
+* name
+* mentor_id
+
+---
+
+## ⚙️ LOGIC
+
+### TOTAL AYAT CALCULATION
+
+ayah_count = ayah_end - ayah_start + 1
+
+### LEADERBOARD
+
+sum all ayah_count per user
+
+### STREAK
+
+* if user logs entry today → continue streak
+* if skipped day → reset
+
+---
+
+## 🎨 UI DESIGN
+
+Style:
+
+* Clean, modern, Islamic-inspired
+* Color palette:
+
+  * primary: green (#2E7D32)
+  * secondary: white
+* Mobile-first responsive design
+
+Pages:
+
+* Login / Register
+* Dashboard
+* Tracker
+* Leaderboard
+* Halaqah
+* Profile
+
+---
+
+## 🛠️ TECH STACK (AUTO-GENERATE)
+
+* Frontend: React or simple web framework
+* Backend: Node.js or built-in
+* Database: simple built-in DB or JSON storage
+
+---
+
+## 🚀 DEPLOYMENT
+
+* Deploy as a public web app
+* Provide a live URL
+* Ensure app works on mobile browser
+
+---
+
+## ✨ EXTRA (IF POSSIBLE)
+
+* Add badge system:
+
+  * 100 ayat badge
+  * 500 ayat badge
+* Add “daily reminder” message
+* Add search for surah names
+
+---
+
+Build the app fully functional, clean UI, and ready for real users.
