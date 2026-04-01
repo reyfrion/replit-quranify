@@ -1,0 +1,228 @@
+Build a **fully functional, deployable web application** called **Quranify** — a Quran memorization (Hifzh) tracking platform with clean UI, gamification, and community features.
+
+The app must be simple, responsive, and ready to run immediately (no complex setup).
+
+---
+
+# 🎯 CORE GOAL
+
+Help users build a consistent Quran memorization habit through:
+
+* daily tracking
+* streak system
+* leaderboard
+* simple and motivating UX
+
+---
+
+# 🛠️ TECH REQUIREMENTS
+
+* Use **Node.js + Express** for backend
+* Use **vanilla HTML, CSS, JavaScript** (no heavy frameworks)
+* Store data in a local JSON file (for MVP)
+* Serve frontend from `/public`
+* App must run with:
+
+  ```
+  node server.js
+  ```
+* Must be deployable in Replit
+
+---
+
+# 📁 PROJECT STRUCTURE
+
+```
+/project
+  server.js
+  database.json
+  /public
+    index.html
+    style.css
+    app.js
+```
+
+---
+
+# 🗄️ DATABASE STRUCTURE (database.json)
+
+```
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "User",
+      "total_ayat": 0,
+      "streak": 0,
+      "last_active": null
+    }
+  ],
+  "hafalan": []
+}
+```
+
+---
+
+# ⚙️ BACKEND FEATURES
+
+### 1. GET /data
+
+Return all database content
+
+### 2. POST /add
+
+Add new hafalan entry:
+
+* surah
+* ayah_start
+* ayah_end
+
+Logic:
+
+* calculate total ayat:
+
+  ```
+  total = ayah_end - ayah_start + 1
+  ```
+* update:
+
+  * hafalan list
+  * user's total_ayat
+
+---
+
+# 🔥 STREAK SYSTEM (IMPORTANT)
+
+When user submits hafalan:
+
+* If last_active == yesterday → streak +1
+* If last_active == today → keep streak
+* Else → reset streak to 1
+
+Update:
+
+* last_active = today
+
+---
+
+# 🎨 UI DESIGN (IMPORTANT — MUST FOLLOW)
+
+Style:
+
+* modern, clean, minimal
+* calm and focused experience
+* mobile-first design
+
+### Color system:
+
+* primary: #2563EB (blue)
+* hover: #1D4ED8
+* background: #F8FAFC
+* card: #FFFFFF
+* text: #0F172A
+* secondary text: #64748B
+
+---
+
+# 📱 UI STRUCTURE
+
+## Dashboard Page
+
+### 1. Greeting section
+
+* “Assalamu’alaikum, [Name] 👋”
+* subtitle:
+  “Build your Quran habit, one ayah at a time”
+
+---
+
+### 2. Progress Card
+
+* show:
+
+  * total ayat
+  * progress bar (visual)
+
+---
+
+### 3. Streak Card
+
+* show:
+
+  * 🔥 current streak
+  * last activity
+
+---
+
+### 4. Add Hafalan Form
+
+Fields:
+
+* surah (text)
+* ayah_start (number)
+* ayah_end (number)
+
+Button:
+
+* “Simpan Hafalan”
+
+---
+
+### 5. Leaderboard Preview
+
+* simple ranking:
+
+  * name
+  * total ayat
+
+---
+
+# ⚡ FRONTEND BEHAVIOR
+
+* On load:
+  → fetch `/data`
+  → update UI
+
+* On submit:
+  → POST `/add`
+  → reload data
+  → show message:
+  “MasyaAllah, hafalan hari ini tercatat 🤍”
+
+---
+
+# 🎯 UX REQUIREMENTS
+
+* minimal input friction
+* fast interaction (<10 seconds to submit)
+* clear visual hierarchy
+* smooth and calm feeling
+
+---
+
+# ✨ EXTRA FEATURES (IF POSSIBLE)
+
+* simple animation on button click
+* highlight progress increase
+* responsive mobile layout
+
+---
+
+# 🚀 DEPLOYMENT
+
+* Must run immediately after generation
+* Must work in browser
+* Must be ready to deploy via Replit
+
+---
+
+# 🔥 OUTPUT EXPECTATION
+
+Generate:
+
+* full working code
+* clean UI
+* structured files
+* no broken features
+
+The result should feel like a real MVP product, not a demo.

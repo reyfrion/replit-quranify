@@ -38,7 +38,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-serif font-bold text-foreground">
             Assalamu'alaikum, {user?.name?.split(' ')[0]}
           </h1>
-          <p className="text-muted-foreground mt-1">May your hifzh journey be blessed today.</p>
+          <p className="text-muted-foreground mt-1">Build your Quran habit, one ayah at a time.</p>
         </div>
         <Link href="/tracker">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2">

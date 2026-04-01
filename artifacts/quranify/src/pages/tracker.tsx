@@ -98,7 +98,7 @@ export default function Tracker() {
           onSuccess: () => {
             invalidateQueries();
             setIsDialogOpen(false);
-            toast({ title: "Added successfully" });
+            toast({ title: "MasyaAllah, hafalan hari ini tercatat 🤍" });
           }
         }
       );
@@ -256,7 +256,7 @@ export default function Tracker() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Entry"}
+                  {createMutation.isPending || updateMutation.isPending ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Simpan Hafalan"}
                 </Button>
               </form>
             </Form>
