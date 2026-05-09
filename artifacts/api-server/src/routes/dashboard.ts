@@ -1,7 +1,12 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { usersTable, hafalanTable } from "@workspace/db/schema";
-import { sql, eq, gte, and, desc } from "drizzle-orm";
+import { getUserById } from "../services/userService.js";
+import {
+  getUserTotalAyat,
+  getWeeklyAyat,
+  getDailyAyat,
+  getRecentHafalan,
+} from "../services/hafalanService.js";
+import { computeBadges } from "../services/leaderboardService.js";
 
 const router: IRouter = Router();
 
@@ -44,59 +49,24 @@ router.get("/summary", async (req, res) => {
   const userId = requireAuth(req, res);
   if (!userId) return;
 
-  const ayatRes = await db
-    .select({ total: sql<number>`COALESCE(SUM(${hafalanTable.ayahEnd} - ${hafalanTable.ayahStart} + 1), 0)` })
-    .from(hafalanTable)
-    .where(eq(hafalanTable.userId, userId));
-  const totalAyat = Number(ayatRes[0]?.total ?? 0);
-
-  const user = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  const streak = user[0]?.streak ?? 0;
-  const lastActivity = user[0]?.lastActivityDate ?? null;
-
-  const recent = await db
-    .select()
-    .from(hafalanTable)
-    .where(eq(hafalanTable.userId, userId))
-    .orderBy(desc(hafalanTable.createdAt))
-    .limit(5);
-
-  const recentHafalan = recent.map(r => ({
-    id: r.id,
-    userId: r.userId,
-    surah: r.surah,
-    surahNumber: r.surahNumber,
-    ayahStart: r.ayahStart,
-    ayahEnd: r.ayahEnd,
-    ayahCount: r.ayahEnd - r.ayahStart + 1,
-    status: r.status,
-    date: r.date,
-    createdAt: r.createdAt.toISOString(),
-  }));
-
-  function computeBadges(totalAyat: number): string[] {
-    const badges: string[] = [];
-    if (totalAyat >= 100) badges.push("100 Ayat");
-    if (totalAyat >= 500) badges.push("500 Ayat");
-    if (totalAyat >= 1000) badges.push("1000 Ayat");
-    return badges;
-  }
-
-  const dayIndex = new Date().getDay();
-  const todayAyah = dailyAyahs[dayIndex % dailyAyahs.length];
-  const quoteIndex = (new Date().getDate()) % motivationalQuotes.length;
-  const quote = motivationalQuotes[quoteIndex];
-
-  // Calculate weekly progress (ayat this week)
   const startOfWeek = new Date();
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-  const weekStr = startOfWeek.toISOString().split("T")[0];
+  const weekStr = startOfWeek.toISOString().split("T")[0]!;
 
-  const weeklyRes = await db
-    .select({ total: sql<number>`COALESCE(SUM(${hafalanTable.ayahEnd} - ${hafalanTable.ayahStart} + 1), 0)` })
-    .from(hafalanTable)
-    .where(and(eq(hafalanTable.userId, userId), gte(hafalanTable.date, weekStr)));
-  const weeklyProgress = Number(weeklyRes[0]?.total ?? 0);
+  const [totalAyat, user, recentHafalan, weeklyProgress] = await Promise.all([
+    getUserTotalAyat(userId),
+    getUserById(userId),
+    getRecentHafalan(userId, 5),
+    getWeeklyAyat(userId, weekStr),
+  ]);
+
+  const streak = user?.streak ?? 0;
+  const lastActivity = user?.last_activity_date ?? null;
+
+  const dayIndex = new Date().getDay();
+  const todayAyah = dailyAyahs[dayIndex % dailyAyahs.length]!;
+  const quoteIndex = new Date().getDate() % motivationalQuotes.length;
+  const quote = motivationalQuotes[quoteIndex]!;
 
   return res.json({
     totalAyat,
@@ -118,41 +88,34 @@ router.get("/analytics", async (req, res) => {
   if (!userId) return;
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const weekly = [];
-  let totalThisWeek = 0;
-
-  for (let i = 6; i >= 0; i--) {
+  const weeklyPromises = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    const res2 = await db
-      .select({ total: sql<number>`COALESCE(SUM(${hafalanTable.ayahEnd} - ${hafalanTable.ayahStart} + 1), 0)` })
-      .from(hafalanTable)
-      .where(and(eq(hafalanTable.userId, userId), eq(hafalanTable.date, dateStr)));
-    const ayat = Number(res2[0]?.total ?? 0);
-    weekly.push({ day: dayNames[d.getDay()], ayat });
-    totalThisWeek += ayat;
-  }
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toISOString().split("T")[0]!;
+    return getDailyAyat(userId, dateStr).then(ayat => ({
+      day: dayNames[d.getDay()]!,
+      ayat,
+    }));
+  });
 
-  const monthly = [];
-  let totalThisMonth = 0;
-  for (let w = 3; w >= 0; w--) {
+  const weekly = await Promise.all(weeklyPromises);
+  const totalThisWeek = weekly.reduce((sum, d) => sum + d.ayat, 0);
+
+  const monthlyPromises = Array.from({ length: 4 }, (_, w) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() - w * 7);
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 6);
-    const startStr = startDate.toISOString().split("T")[0];
-    const endStr = endDate.toISOString().split("T")[0];
-    const res2 = await db
-      .select({ total: sql<number>`COALESCE(SUM(${hafalanTable.ayahEnd} - ${hafalanTable.ayahStart} + 1), 0)` })
-      .from(hafalanTable)
-      .where(and(eq(hafalanTable.userId, userId), gte(hafalanTable.date, startStr)));
-    const ayat = Number(res2[0]?.total ?? 0);
-    monthly.push({ week: `Week ${4 - w}`, ayat });
-    totalThisMonth += ayat;
-  }
+    const startStr = startDate.toISOString().split("T")[0]!;
+    return getWeeklyAyat(userId, startStr).then(ayat => ({
+      week: `Week ${4 - w}`,
+      ayat,
+    }));
+  });
 
-  const averagePerDay = totalThisWeek > 0 ? Math.round(totalThisWeek / 7 * 10) / 10 : 0;
+  const monthly = (await Promise.all(monthlyPromises)).reverse();
+  const totalThisMonth = monthly.reduce((sum, w) => sum + w.ayat, 0);
+  const averagePerDay = totalThisWeek > 0 ? Math.round((totalThisWeek / 7) * 10) / 10 : 0;
 
   return res.json({ weekly, monthly, totalThisWeek, totalThisMonth, averagePerDay });
 });

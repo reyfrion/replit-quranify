@@ -1,8 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { getUserById, getUserByEmail, createUser, updateUser, getUserTotalAyat } from "../services/userService.js";
+import { getHalaqahById } from "../services/halaqahService.js";
 
 const router: IRouter = Router();
 
@@ -10,7 +9,7 @@ function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password + "quranify_salt").digest("hex");
 }
 
-function computeBadges(totalAyat: number): string[] {
+export function computeBadges(totalAyat: number): string[] {
   const badges: string[] = [];
   if (totalAyat >= 100) badges.push("100 Ayat");
   if (totalAyat >= 500) badges.push("500 Ayat");
@@ -18,38 +17,30 @@ function computeBadges(totalAyat: number): string[] {
   return badges;
 }
 
-async function getUserWithStats(userId: number) {
-  const { hafalanTable, halaqahTable } = await import("@workspace/db/schema");
-  const { sql, sum } = await import("drizzle-orm");
+export async function getUserWithStats(userId: number) {
+  const user = await getUserById(userId);
+  if (!user) return null;
 
-  const user = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user[0]) return null;
-
-  const totalAyatResult = await db
-    .select({ total: sql<number>`COALESCE(SUM(${hafalanTable.ayahEnd} - ${hafalanTable.ayahStart} + 1), 0)` })
-    .from(hafalanTable)
-    .where(eq(hafalanTable.userId, userId));
-
-  const totalAyat = Number(totalAyatResult[0]?.total ?? 0);
+  const totalAyat = await getUserTotalAyat(userId);
   const badges = computeBadges(totalAyat);
 
   let halaqahName: string | null = null;
-  if (user[0].halaqahGroup) {
-    const halaqah = await db.select().from(halaqahTable).where(eq(halaqahTable.id, user[0].halaqahGroup)).limit(1);
-    halaqahName = halaqah[0]?.name ?? null;
+  if (user.halaqah_group) {
+    const halaqah = await getHalaqahById(user.halaqah_group);
+    halaqahName = halaqah?.name ?? null;
   }
 
   return {
-    id: user[0].id,
-    name: user[0].name,
-    email: user[0].email,
-    role: user[0].role,
-    halaqahGroup: user[0].halaqahGroup ?? null,
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    halaqahGroup: user.halaqah_group ?? null,
     halaqahName,
     totalAyat,
-    streak: user[0].streak,
+    streak: user.streak,
     badges,
-    createdAt: user[0].createdAt.toISOString(),
+    createdAt: user.created_at,
   };
 }
 
@@ -59,20 +50,13 @@ router.post("/register", async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Name, email, and password are required" });
     }
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-    if (existing.length > 0) {
+    const existing = await getUserByEmail(email);
+    if (existing) {
       return res.status(400).json({ error: "Email already registered" });
     }
     const hashed = hashPassword(password);
-    const [created] = await db.insert(usersTable).values({
-      name,
-      email,
-      password: hashed,
-      role: role ?? "member",
-    }).returning();
-
+    const created = await createUser({ name, email, password: hashed, role: role ?? "member" });
     (req.session as any).userId = created.id;
-
     const user = await getUserWithStats(created.id);
     return res.status(201).json({ user, message: "Registered successfully" });
   } catch (err) {
@@ -88,12 +72,12 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password required" });
     }
     const hashed = hashPassword(password);
-    const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-    if (!users[0] || users[0].password !== hashed) {
+    const foundUser = await getUserByEmail(email);
+    if (!foundUser || foundUser.password !== hashed) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
-    (req.session as any).userId = users[0].id;
-    const user = await getUserWithStats(users[0].id);
+    (req.session as any).userId = foundUser.id;
+    const user = await getUserWithStats(foundUser.id);
     return res.json({ user, message: "Logged in successfully" });
   } catch (err) {
     req.log.error(err);
@@ -120,16 +104,13 @@ router.put("/me/profile", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   const { name, email } = req.body;
   const updates: Record<string, string> = {};
-  if (name) updates.name = name;
-  if (email) updates.email = email;
-  if (Object.keys(updates).length === 0) {
-    const user = await getUserWithStats(userId);
-    return res.json(user);
+  if (name) updates["name"] = name;
+  if (email) updates["email"] = email;
+  if (Object.keys(updates).length > 0) {
+    await updateUser(userId, updates);
   }
-  await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
   const user = await getUserWithStats(userId);
   return res.json(user);
 });
 
-export { getUserWithStats, computeBadges };
 export default router;
